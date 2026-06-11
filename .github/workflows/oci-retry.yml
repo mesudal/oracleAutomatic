@@ -1,0 +1,43 @@
+name: OCI Free Tier Auto Create
+
+on:
+  schedule:
+    - cron: '0 * * * *'       # 💡 [수정] 1시간마다(매시 정각) 실행되도록 변경
+  workflow_dispatch:          # 수동 실행 버튼
+
+jobs:
+  create-instance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55       # 💡 [수정] 4분 -> 55분으로 변경. 55분 동안 끄지 않고 계속 시도!
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 필수 라이브러리 설치
+        run: pip install oci requests --quiet
+
+      - name: 인스턴스 생성 시도
+        env:
+          # ── OCI 인증 정보 ──────────────────────────────────
+          OCI_USER:              ${{ secrets.OCI_USER }}
+          OCI_FINGERPRINT:       ${{ secrets.OCI_FINGERPRINT }}
+          OCI_TENANCY:           ${{ secrets.OCI_TENANCY }}
+          OCI_REGION:            ${{ secrets.OCI_REGION }}
+          OCI_KEY_CONTENT:       ${{ secrets.OCI_KEY_CONTENT }}
+          # ── 인스턴스 설정 ──────────────────────────────────
+          OCI_COMPARTMENT_ID:     ${{ secrets.OCI_COMPARTMENT_ID }}
+          OCI_SUBNET_ID:          ${{ secrets.OCI_SUBNET_ID }}
+          OCI_IMAGE_ID:           ${{ secrets.OCI_IMAGE_ID }}
+          OCI_AVAILABILITY_DOMAIN: ${{ secrets.OCI_AVAILABILITY_DOMAIN }}
+          SSH_PUBLIC_KEY:         ${{ secrets.SSH_PUBLIC_KEY }}
+          # ── 슬랙 인증 정보 ──────────────────────────────────
+          SLACK_BOT_TOKEN:        ${{ secrets.SLACK_BOT_TOKEN }}
+        
+        # 💡 [수정] python 명령어 뒤에 -u 를 붙여서 로그가 버퍼링 없이 실시간으로 찍히게 함
+        run: python -u oci_create.py
